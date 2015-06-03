@@ -52,7 +52,7 @@ namespace SharpVectors.Renderers.Wpf
 
         #region Private Methods
 
-        private LinearGradientBrush GetLinearGradientBrush(Rect elementBounds, 
+        private Brush GetLinearGradientBrush(Rect elementBounds,
             SvgLinearGradientElement res)
         {
             double x1 = res.X1.AnimVal.Value;
@@ -62,8 +62,9 @@ namespace SharpVectors.Renderers.Wpf
 
             GradientStopCollection gradientStops = GetGradientStops(res.Stops);
 
+            Brush Brush = null;
             //LinearGradientBrush brush = new LinearGradientBrush(gradientStops);
-            LinearGradientBrush brush = new LinearGradientBrush(gradientStops,
+            var LGbrush = new LinearGradientBrush(gradientStops,
                 new Point(x1, y1), new Point(x2, y2));
 
             SvgSpreadMethod spreadMethod = SvgSpreadMethod.Pad;
@@ -73,11 +74,10 @@ namespace SharpVectors.Renderers.Wpf
 
                 if (spreadMethod != SvgSpreadMethod.None)
                 {
-                    brush.SpreadMethod = WpfConvert.ToSpreadMethod(spreadMethod);
+                    LGbrush.SpreadMethod = WpfConvert.ToSpreadMethod(spreadMethod);
                 }
             }
 
-            Transform viewBoxTransform = null;
 
             SvgUnitType mappingMode = SvgUnitType.ObjectBoundingBox;
             if (res.GradientUnits != null)
@@ -85,105 +85,12 @@ namespace SharpVectors.Renderers.Wpf
                 mappingMode = (SvgUnitType)res.GradientUnits.AnimVal;
                 if (mappingMode == SvgUnitType.ObjectBoundingBox)
                 {
-                    brush.MappingMode = BrushMappingMode.RelativeToBoundingBox;
+                    LGbrush.MappingMode = BrushMappingMode.RelativeToBoundingBox;
                 }
                 else if (mappingMode == SvgUnitType.UserSpaceOnUse)
                 {
-                    brush.MappingMode = BrushMappingMode.Absolute;
+                    LGbrush.MappingMode = BrushMappingMode.Absolute;
 
-                    viewBoxTransform = FitToViewbox(new SvgRect(x1, y1,
-                        Math.Abs(x2 - x1), Math.Abs(y2 - y1)),
-                        elementBounds);
-                }
-            }
-
-            MatrixTransform transform = GetTransformMatrix(res);
-            if (transform != null && !transform.Matrix.IsIdentity)
-            {
-                if (viewBoxTransform != null)
-                {
-                    TransformGroup group = new TransformGroup();
-                    group.Children.Add(viewBoxTransform);
-                    group.Children.Add(transform);
-
-                    brush.Transform = group;
-                }
-                else
-                {
-                    brush.Transform = transform;
-                    //brush.StartPoint = new Point(0, 0.5);
-                    //brush.EndPoint = new Point(1, 0.5);
-                }
-
-                //brush.StartPoint = new Point(0, 0);
-                //brush.EndPoint = new Point(1, 1);
-            }
-            else
-            {
-                float fLeft   = (float)res.X1.AnimVal.Value;
-                float fRight  = (float)res.X2.AnimVal.Value;
-                float fTop    = (float)res.Y1.AnimVal.Value;
-                float fBottom = (float)res.Y2.AnimVal.Value;
-
-                if (fTop == fBottom)
-                {
-                    //mode = LinearGradientMode.Horizontal;
-
-                    //brush.StartPoint = new Point(0, 0.5);
-                    //brush.EndPoint = new Point(1, 0.5);
-                }
-                else
-                {
-                    if (fLeft == fRight)
-                    {
-                        //mode = LinearGradientMode.Vertical;
-
-                        //brush.StartPoint = new Point(0.5, 0);
-                        //brush.EndPoint = new Point(0.5, 1);
-                    }
-                    else
-                    {
-                        if (fLeft < fRight)
-                        {
-                            if (viewBoxTransform != null)
-                            {
-                                TransformGroup group = new TransformGroup();
-                                group.Children.Add(viewBoxTransform);
-                                group.Children.Add(new RotateTransform(45, 0.5, 0.5));
-
-                                brush.Transform = group;
-                            }
-                            else
-                            {
-                                brush.RelativeTransform = new RotateTransform(45, 0.5, 0.5);
-                            }
-
-                            //mode = LinearGradientMode.ForwardDiagonal;
-                            //brush.EndPoint = new Point(x1, y1 + 1);
-
-                            //brush.StartPoint = new Point(0, 0);
-                            //brush.EndPoint = new Point(1, 1);
-                        }
-                        else
-                        {
-                            //mode = LinearGradientMode.BackwardDiagonal;
-                            if (viewBoxTransform != null)
-                            {
-                                TransformGroup group = new TransformGroup();
-                                group.Children.Add(viewBoxTransform);
-                                group.Children.Add(new RotateTransform(-45, 0.5, 0.5));
-
-                                brush.Transform = group;
-                            }
-                            else
-                            {
-                                brush.RelativeTransform = new RotateTransform(-45, 0.5, 0.5);
-                            }
-
-                            //brush.StartPoint = new Point(0, 0);
-                            //brush.EndPoint = new Point(1, 1);
-                        }
-                    }
                 }
             }
 
@@ -192,25 +99,52 @@ namespace SharpVectors.Renderers.Wpf
             {
                 if (colorInterpolation == "linearRGB")
                 {
-                    brush.ColorInterpolationMode = ColorInterpolationMode.ScRgbLinearInterpolation;
+                    LGbrush.ColorInterpolationMode = ColorInterpolationMode.ScRgbLinearInterpolation;
                 }
                 else
                 {
-                    brush.ColorInterpolationMode = ColorInterpolationMode.SRgbLinearInterpolation;
+                    LGbrush.ColorInterpolationMode = ColorInterpolationMode.SRgbLinearInterpolation;
                 }
             }
 
-            return brush;
+
+
+
+            MatrixTransform transform = GetTransformMatrix(res);
+            if (transform != null && !transform.Matrix.IsIdentity)
+            {
+                LGbrush.Transform = transform;
+
+            }
+            else
+            {
+                if (mappingMode == SvgUnitType.ObjectBoundingBox)
+                {
+                    var drawingBrush = new DrawingBrush();
+                    drawingBrush.Stretch = Stretch.Fill;
+                    drawingBrush.Viewbox = new Rect(0, 0, 1, 1);
+                    var DrawingRect = new GeometryDrawing(LGbrush, null, new RectangleGeometry(new Rect(0, 0, 1, 1)));
+                    drawingBrush.Drawing = DrawingRect;
+                    Brush = drawingBrush;
+                }
+            }
+
+            if (Brush == null)
+            {
+                Brush = LGbrush;
+            }
+
+            return Brush;
         }
 
-        private RadialGradientBrush GetRadialGradientBrush(Rect elementBounds, 
+        private RadialGradientBrush GetRadialGradientBrush(Rect elementBounds,
             SvgRadialGradientElement res)
         {
             double centerX = res.Cx.AnimVal.Value;
             double centerY = res.Cy.AnimVal.Value;
-            double focusX  = res.Fx.AnimVal.Value;
-            double focusY  = res.Fy.AnimVal.Value;
-            double radius  = res.R.AnimVal.Value;
+            double focusX = res.Fx.AnimVal.Value;
+            double focusY = res.Fy.AnimVal.Value;
+            double radius = res.R.AnimVal.Value;
 
             GradientStopCollection gradientStops = GetGradientStops(res.Stops);
 
@@ -218,7 +152,7 @@ namespace SharpVectors.Renderers.Wpf
 
             brush.RadiusX = radius;
             brush.RadiusY = radius;
-            brush.Center  = new Point(centerX, centerY);
+            brush.Center = new Point(centerX, centerY);
             brush.GradientOrigin = new Point(focusX, focusY);
 
             if (res.SpreadMethod != null)
@@ -249,7 +183,7 @@ namespace SharpVectors.Renderers.Wpf
                 brush.Transform = transform;
             }
             else
-            {   
+            {
             }
 
             string colorInterpolation = res.GetPropertyValue("color-interpolation");
@@ -270,7 +204,7 @@ namespace SharpVectors.Renderers.Wpf
 
         private MatrixTransform GetTransformMatrix(SvgGradientElement gradientElement)
         {
-            SvgMatrix svgMatrix = 
+            SvgMatrix svgMatrix =
                 ((SvgTransformList)gradientElement.GradientTransform.AnimVal).TotalMatrix;
 
             MatrixTransform transformMatrix = new MatrixTransform(svgMatrix.A, svgMatrix.B, svgMatrix.C,
@@ -313,7 +247,7 @@ namespace SharpVectors.Renderers.Wpf
                     alpha = Math.Min(alpha, 255);
                     alpha = Math.Max(alpha, 0);
 
-                    color = Color.FromArgb((byte)Convert.ToInt32(alpha), 
+                    color = Color.FromArgb((byte)Convert.ToInt32(alpha),
                         color.R, color.G, color.B);
                 }
 
@@ -337,7 +271,7 @@ namespace SharpVectors.Renderers.Wpf
 
         private Transform FitToViewbox(SvgRect viewBox, Rect rectToFit)
         {
-            SvgPreserveAspectRatioType alignment = 
+            SvgPreserveAspectRatioType alignment =
                 SvgPreserveAspectRatioType.XMidYMid;
 
             double[] transformArray = FitToViewBox(alignment,
@@ -347,8 +281,8 @@ namespace SharpVectors.Renderers.Wpf
 
             double translateX = transformArray[0];
             double translateY = transformArray[1];
-            double scaleX     = transformArray[2];
-            double scaleY     = transformArray[3];
+            double scaleX = transformArray[2];
+            double scaleY = transformArray[3];
 
             Transform translateMatrix = null;
             Transform scaleMatrix = null;
