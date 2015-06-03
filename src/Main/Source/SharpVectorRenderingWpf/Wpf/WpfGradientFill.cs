@@ -174,6 +174,11 @@ namespace SharpVectors.Renderers.Wpf
                 else if (mappingMode == SvgUnitType.UserSpaceOnUse)
                 {
                     brush.MappingMode = BrushMappingMode.Absolute;
+
+                    // use the default value of UserSpaceOnUse mode.
+                    // Which is the center of the element.
+                    if (res.Fx.AnimVal.UnitType == SvgLengthType.Percentage)
+                        brush.GradientOrigin = brush.Center;
                 }
             }
 
